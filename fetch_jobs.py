@@ -25,33 +25,40 @@ SKILLS = {
 
 # Search queries are built from skills, not job titles.
 QUERIES = [
-    "sql power bi financial analysis",
-    "fp&a variance analysis budgeting forecasting",
-    "excel mis reporting accounting dashboard",
-    "tableau python financial reporting",
-    "financial modeling data analysis p&l",
+    "power bi", "sql", "fp&a", "financial planning", "variance analysis",
+    "budgeting forecasting", "excel mis", "tableau", "financial reporting",
+    "data analysis accounting",
 ]
 
-def fetch(query):
-    params = {
-        "app_id": APP_ID, "app_key": APP_KEY, "results_per_page": 50,
-        "what_or": query, "where": LOCATION, "distance": 30,
-        "max_days_old": MAX_DAYS_OLD, "sort_by": "date",
-        "content-type": "application/json",
-    }
-    url = "https://api.adzuna.com/v1/api/jobs/in/search/1?" + urllib.parse.urlencode(params)
+def call(params):
+    base = {"app_id": APP_ID, "app_key": APP_KEY, "results_per_page": 50,
+            "content-type": "application/json"}
+    base.update(params)
+    url = "https://api.adzuna.com/v1/api/jobs/in/search/1?" + urllib.parse.urlencode(base)
     try:
         with urllib.request.urlopen(url, timeout=30) as r:
             data = json.load(r)
-            res = data.get("results", [])
-            print(f"[{query}] returned {len(res)} jobs (total available: {data.get('count')})")
-            return res
+            return data.get("results", []), data.get("count")
     except urllib.error.HTTPError as e:
         print("HTTP ERROR", e.code, e.read()[:300])
-        return []
     except Exception as e:
-        print("fetch failed:", query, e)
-        return []
+        print("fetch failed:", e)
+    return [], 0
+
+def fetch(query):
+    attempts = [
+        ("Hyderabad, 14 days", {"what": query, "where": LOCATION, "max_days_old": MAX_DAYS_OLD, "sort_by": "date"}),
+        ("Hyderabad, any date", {"what": query, "where": LOCATION, "sort_by": "date"}),
+        ("Telangana", {"what": query, "where": "Telangana", "sort_by": "date"}),
+        ("All India + hyderabad", {"what": query + " hyderabad", "sort_by": "date"}),
+    ]
+    for label, p in attempts:
+        res, count = call(p)
+        print(f"[{query}] {label}: {len(res)} jobs (total {count})")
+        if res:
+            return [j for j in res if any(k in json.dumps(j.get("location", {})).lower() + j.get("description", "").lower() + j.get("title", "").lower()
+                    for k in ("hyderabad", "telangana", "secunderabad"))]
+    return []
 
 def score(text):
     t = text.lower()
