@@ -4,8 +4,9 @@ Source: Adzuna India API (free key). Output: docs/index.html
 import os, re, json, html, urllib.request, urllib.parse, urllib.error
 from datetime import datetime, timezone, timedelta
 
-APP_ID = os.environ["ADZUNA_APP_ID"]
-APP_KEY = os.environ["ADZUNA_APP_KEY"]
+APP_ID = "".join(os.environ["ADZUNA_APP_ID"].split())
+APP_KEY = "".join(os.environ["ADZUNA_APP_KEY"].split())
+print("App ID length:", len(APP_ID), "(expected 8) | App Key length:", len(APP_KEY), "(expected 32)")
 
 LOCATION = "Hyderabad"
 MY_EXP = 4            # years
@@ -31,8 +32,7 @@ QUERIES = [
 ]
 
 def call(params):
-    base = {"app_id": APP_ID, "app_key": APP_KEY, "results_per_page": 50,
-            "content-type": "application/json"}
+    base = {"app_id": APP_ID, "app_key": APP_KEY, "results_per_page": 50}
     base.update(params)
     url = "https://api.adzuna.com/v1/api/jobs/in/search/1?" + urllib.parse.urlencode(base)
     try:
@@ -40,7 +40,7 @@ def call(params):
             data = json.load(r)
             return data.get("results", []), data.get("count")
     except urllib.error.HTTPError as e:
-        print("HTTP ERROR", e.code, e.read()[:300])
+        print("HTTP ERROR", e.code, "- check ADZUNA_APP_ID / ADZUNA_APP_KEY secrets")
     except Exception as e:
         print("fetch failed:", e)
     return [], 0
