@@ -1,0 +1,27 @@
+name: Daily job feed
+on:
+  schedule:
+    - cron: "30 3 * * *"
+  workflow_dispatch: {}
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fetch jobs
+        env:
+          ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
+          ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
+        run: python fetch_jobs.py
+      - name: Commit page
+        run: |
+          git config user.name "job-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add docs/index.html
+          git commit -m "Update jobs" || echo "No changes"
+          git push
