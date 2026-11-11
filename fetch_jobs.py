@@ -1,7 +1,7 @@
 """Daily skill-based job feed for Hyderabad (4 yrs experience).
 Source: Adzuna India API (free key). Output: docs/index.html
 """
-import os, re, json, html, urllib.request, urllib.parse
+import os, re, json, html, urllib.request, urllib.parse, urllib.error
 from datetime import datetime, timezone, timedelta
 
 APP_ID = os.environ["ADZUNA_APP_ID"]
@@ -9,8 +9,8 @@ APP_KEY = os.environ["ADZUNA_APP_KEY"]
 
 LOCATION = "Hyderabad"
 MY_EXP = 4            # years
-EXP_TOLERANCE = 2     # keep jobs asking for 2 to 6 years
-MAX_DAYS_OLD = 3
+EXP_TOLERANCE = 3     # keep jobs asking for roughly 1 to 7 years
+MAX_DAYS_OLD = 14
 MIN_SCORE = 2         # how many skill points a job needs to appear
 
 # Skill -> points. Edit freely.
@@ -42,7 +42,13 @@ def fetch(query):
     url = "https://api.adzuna.com/v1/api/jobs/in/search/1?" + urllib.parse.urlencode(params)
     try:
         with urllib.request.urlopen(url, timeout=30) as r:
-            return json.load(r).get("results", [])
+            data = json.load(r)
+            res = data.get("results", [])
+            print(f"[{query}] returned {len(res)} jobs (total available: {data.get('count')})")
+            return res
+    except urllib.error.HTTPError as e:
+        print("HTTP ERROR", e.code, e.read()[:300])
+        return []
     except Exception as e:
         print("fetch failed:", query, e)
         return []
@@ -61,8 +67,10 @@ def exp_ok(text):
     return lo <= MY_EXP + EXP_TOLERANCE and hi >= MY_EXP - EXP_TOLERANCE
 
 jobs = {}
+raw = 0
 for q in QUERIES:
     for j in fetch(q):
+        raw += 1
         text = f"{j.get('title','')} {j.get('description','')}"
         sc, hits = score(text)
         if sc < MIN_SCORE or not exp_ok(text):
@@ -104,4 +112,4 @@ a{{color:var(--link);font-weight:600;text-decoration:none}} .meta{{color:var(--m
 
 os.makedirs("docs", exist_ok=True)
 open("docs/index.html", "w", encoding="utf-8").write(page)
-print("Saved", len(ranked), "jobs")
+print("Raw fetched:", raw, "| After filters:", len(ranked))
