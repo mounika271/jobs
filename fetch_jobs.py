@@ -11,7 +11,7 @@ LOCATION = "Hyderabad"
 MY_EXP = 4            # years
 EXP_TOLERANCE = 2     # keep jobs asking for 2 to 6 years
 MAX_DAYS_OLD = 3
-MIN_SCORE = 3         # how many skill points a job needs to appear
+MIN_SCORE = 2         # how many skill points a job needs to appear
 
 # Skill -> points. Edit freely.
 SKILLS = {
